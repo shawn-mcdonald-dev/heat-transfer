@@ -85,15 +85,15 @@ int main(int argc, char *argv[]) {
         for (int i = 1; i < rows - 1; i++) {
             for (int j = 1; j < cols - 1; j++) {
                 next[i * cols + j] = (
-                    curr[(i - 1) * cols + (j - 1)] +
-                    curr[(i - 1) * cols + j] +
-                    curr[(i - 1) * cols + (j + 1)] +
-                    curr[i * cols + (j + 1)] +
-                    curr[(i + 1) * cols + (j + 1)] +
-                    curr[(i + 1) * cols + j] +
-                    curr[(i + 1) * cols + (j - 1)] +
-                    curr[i * cols + (j - 1)] +
-                    curr[i * cols + j]
+                    curr[(i - 1) * cols + (j - 1)] +  // NW
+                    curr[(i - 1) * cols + j] +        // N
+                    curr[(i - 1) * cols + (j + 1)] +  // NE
+                    curr[i * cols + (j + 1)] +        // E
+                    curr[(i + 1) * cols + (j + 1)] +  // SE
+                    curr[(i + 1) * cols + j] +        // S
+                    curr[(i + 1) * cols + (j - 1)] +  // SW
+                    curr[i * cols + (j - 1)] +        // W
+                    curr[i * cols + j]                // M
                 ) / 9.0;
             }
         }
