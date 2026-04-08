@@ -4,6 +4,13 @@
 #include <pthread.h>
 
 typedef struct {
+    pthread_mutex_t mutex;
+    pthread_cond_t cond;
+    int count;
+    int trip_count;
+} barrier_t;
+
+typedef struct {
     int tid;
     int start_row;
     int end_row;
@@ -13,47 +20,80 @@ static int rows, cols, num_iters, num_threads;
 static int debug = 0;
 static double *curr = NULL;
 static double *next = NULL;
-static pthread_barrier_t barrier;
+static barrier_t barrier;
 
-static void print_matrix(double *data, int rows, int cols) {
-    for (int i = 0; i < rows; i++) {
-        for (int j = 0; j < cols; j++) {
-            printf("%5.2f ", data[i * cols + j]);
+/* ---------- Custom barrier for macOS ---------- */
+void barrier_init(barrier_t *b, int n) {
+    pthread_mutex_init(&b->mutex, NULL);
+    pthread_cond_init(&b->cond, NULL);
+    b->count = 0;
+    b->trip_count = n;
+}
+
+void barrier_wait(barrier_t *b) {
+    pthread_mutex_lock(&b->mutex);
+
+    b->count++;
+
+    if (b->count == b->trip_count) {
+        b->count = 0;
+        pthread_cond_broadcast(&b->cond);
+    } else {
+        pthread_cond_wait(&b->cond, &b->mutex);
+    }
+
+    pthread_mutex_unlock(&b->mutex);
+}
+
+void barrier_destroy(barrier_t *b) {
+    pthread_mutex_destroy(&b->mutex);
+    pthread_cond_destroy(&b->cond);
+}
+
+/* ---------- Utility print ---------- */
+static void print_matrix(double *data, int r, int c) {
+    for (int i = 0; i < r; i++) {
+        for (int j = 0; j < c; j++) {
+            printf("%5.2f ", data[i * c + j]);
         }
         printf("\n");
     }
 }
 
+/* ---------- Thread worker ---------- */
 static void *worker(void *arg) {
     thread_arg_t *targ = (thread_arg_t *)arg;
 
     for (int iter = 0; iter < num_iters; iter++) {
-        // Compute assigned interior rows
+        /* Compute assigned interior rows only */
         for (int i = targ->start_row; i <= targ->end_row; i++) {
             for (int j = 1; j < cols - 1; j++) {
                 next[i * cols + j] = (
-                    curr[(i - 1) * cols + (j - 1)] +  // NW
-                    curr[(i - 1) * cols + j] +        // N
-                    curr[(i - 1) * cols + (j + 1)] +  // NE
-                    curr[i * cols + (j + 1)] +        // E
-                    curr[(i + 1) * cols + (j + 1)] +  // SE
-                    curr[(i + 1) * cols + j] +        // S
-                    curr[(i + 1) * cols + (j - 1)] +  // SW
-                    curr[i * cols + (j - 1)] +        // W
-                    curr[i * cols + j]                // M
+                    curr[(i - 1) * cols + (j - 1)] +  /* NW */
+                    curr[(i - 1) * cols + j] +        /* N  */
+                    curr[(i - 1) * cols + (j + 1)] +  /* NE */
+                    curr[i * cols + (j + 1)] +        /* E  */
+                    curr[(i + 1) * cols + (j + 1)] +  /* SE */
+                    curr[(i + 1) * cols + j] +        /* S  */
+                    curr[(i + 1) * cols + (j - 1)] +  /* SW */
+                    curr[i * cols + (j - 1)] +        /* W  */
+                    curr[i * cols + j]                /* M  */
                 ) / 9.0;
             }
         }
 
-        // Wait until all threads finish computing
-        pthread_barrier_wait(&barrier);
+        /* Wait until all threads finish computing */
+        barrier_wait(&barrier);
 
-        // One thread copies boundaries and swaps arrays
+        /* One thread handles boundaries, debug print, and swap */
         if (targ->tid == 0) {
+            /* Copy left/right boundaries */
             for (int i = 0; i < rows; i++) {
                 next[i * cols + 0] = curr[i * cols + 0];
                 next[i * cols + (cols - 1)] = curr[i * cols + (cols - 1)];
             }
+
+            /* Copy top/bottom boundaries */
             for (int j = 0; j < cols; j++) {
                 next[0 * cols + j] = curr[0 * cols + j];
                 next[(rows - 1) * cols + j] = curr[(rows - 1) * cols + j];
@@ -64,18 +104,20 @@ static void *worker(void *arg) {
                 print_matrix(next, rows, cols);
             }
 
+            /* Swap curr and next */
             double *temp = curr;
             curr = next;
             next = temp;
         }
 
-        // Wait until swap is done before next iteration
-        pthread_barrier_wait(&barrier);
+        /* Wait until swap is finished */
+        barrier_wait(&barrier);
     }
 
     return NULL;
 }
 
+/* ---------- Main ---------- */
 int main(int argc, char *argv[]) {
     char *infile = NULL;
     char *outfile = NULL;
@@ -92,13 +134,17 @@ int main(int argc, char *argv[]) {
         } else if (strcmp(argv[k], "-v") == 0 && k + 1 < argc) {
             debug = atoi(argv[++k]);
         } else {
-            fprintf(stderr, "usage: %s -t <num_iters> -i <in> -o <out> -p <num_threads> [-v <debug>]\n", argv[0]);
+            fprintf(stderr,
+                    "usage: %s -t <num_iters> -i <in> -o <out> -p <num_threads> [-v <debug>]\n",
+                    argv[0]);
             return 1;
         }
     }
 
     if (num_iters < 0 || infile == NULL || outfile == NULL || num_threads <= 0) {
-        fprintf(stderr, "usage: %s -t <num_iters> -i <in> -o <out> -p <num_threads> [-v <debug>]\n", argv[0]);
+        fprintf(stderr,
+                "usage: %s -t <num_iters> -i <in> -o <out> -p <num_threads> [-v <debug>]\n",
+                argv[0]);
         return 1;
     }
 
@@ -134,7 +180,7 @@ int main(int argc, char *argv[]) {
     }
     fclose(fp);
 
-    // Initialize next to curr so boundaries start valid
+    /* Start next as a copy of curr so boundaries are valid */
     memcpy(next, curr, rows * cols * sizeof(double));
 
     pthread_t *threads = malloc(num_threads * sizeof(pthread_t));
@@ -148,7 +194,7 @@ int main(int argc, char *argv[]) {
         return 1;
     }
 
-    pthread_barrier_init(&barrier, NULL, num_threads);
+    barrier_init(&barrier, num_threads);
 
     int interior_rows = rows - 2;
     int base = interior_rows / num_threads;
@@ -166,11 +212,11 @@ int main(int argc, char *argv[]) {
 
         if (pthread_create(&threads[tid], NULL, worker, &args[tid]) != 0) {
             fprintf(stderr, "Error creating thread %d\n", tid);
+            barrier_destroy(&barrier);
             free(curr);
             free(next);
             free(threads);
             free(args);
-            pthread_barrier_destroy(&barrier);
             return 1;
         }
     }
@@ -180,18 +226,19 @@ int main(int argc, char *argv[]) {
     }
 
     if (debug >= 1) {
-        printf("rows=%d cols=%d iterations=%d threads=%d\n", rows, cols, num_iters, num_threads);
+        printf("rows=%d cols=%d iterations=%d threads=%d\n",
+               rows, cols, num_iters, num_threads);
         printf("input=%s output=%s\n", infile, outfile);
     }
 
     fp = fopen(outfile, "wb");
     if (fp == NULL) {
         perror("fopen output");
+        barrier_destroy(&barrier);
         free(curr);
         free(next);
         free(threads);
         free(args);
-        pthread_barrier_destroy(&barrier);
         return 1;
     }
 
@@ -200,7 +247,7 @@ int main(int argc, char *argv[]) {
     fwrite(curr, sizeof(double), rows * cols, fp);
     fclose(fp);
 
-    pthread_barrier_destroy(&barrier);
+    barrier_destroy(&barrier);
     free(curr);
     free(next);
     free(threads);

@@ -17,4 +17,4 @@ stencil-2d-pth: stencil-2d-pth.c
 	$(CC) $(CFLAGS) -pthread -o stencil-2d-pth stencil-2d-pth.c
 
 clean:
-	rm -f make-2d print-2d stencil-2d *.o *.dat
+	rm -f make-2d print-2d stencil-2d stencil-2d-pth *.o *.dat
