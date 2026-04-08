@@ -1,20 +1,21 @@
 CC = gcc
 CFLAGS = -Wall -Wstrict-prototypes -std=gnu99
 
-# Targets
+UTILS = utilities.c
+
 all: make-2d print-2d stencil-2d stencil-2d-pth
 
-make-2d: make-2d.c
-	$(CC) $(CFLAGS) -o make-2d make-2d.c
+make-2d: make-2d.c $(UTILS)
+	$(CC) $(CFLAGS) -o $@ $^
 
-print-2d: print-2d.c
-	$(CC) $(CFLAGS) -o print-2d print-2d.c
+print-2d: print-2d.c $(UTILS)
+	$(CC) $(CFLAGS) -o $@ $^
 
-stencil-2d: stencil-2d.c
-	$(CC) $(CFLAGS) -o stencil-2d stencil-2d.c
+stencil-2d: stencil-2d.c $(UTILS)
+	$(CC) $(CFLAGS) -o $@ $^
 
-stencil-2d-pth: stencil-2d-pth.c
-	$(CC) $(CFLAGS) -pthread -o stencil-2d-pth stencil-2d-pth.c
+stencil-2d-pth: stencil-2d-pth.c $(UTILS)
+	$(CC) $(CFLAGS) -pthread -o $@ $^
 
 clean:
 	rm -f make-2d print-2d stencil-2d stencil-2d-pth *.o *.dat

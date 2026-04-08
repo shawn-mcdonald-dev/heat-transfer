@@ -2,6 +2,15 @@
 #include <stdlib.h>
 #include <string.h>
 #include <pthread.h>
+#include <sys/time.h>
+#include "utilities.h"
+
+/* Timing macro */
+#define GET_TIME(now) {                 \
+    struct timeval t;                  \
+    gettimeofday(&t, NULL);             \
+    now = t.tv_sec + t.tv_usec / 1e6;   \
+}
 
 typedef struct {
     pthread_mutex_t mutex;
@@ -50,17 +59,6 @@ void barrier_destroy(barrier_t *b) {
     pthread_cond_destroy(&b->cond);
 }
 
-/* ---------- Utility print ---------- */
-static void print_matrix(double *data, int r, int c) {
-    for (int i = 0; i < r; i++) {
-        for (int j = 0; j < c; j++) {
-            printf("%5.2f ", data[i * c + j]);
-        }
-        printf("\n");
-    }
-}
-
-/* ---------- Thread worker ---------- */
 static void *worker(void *arg) {
     thread_arg_t *targ = (thread_arg_t *)arg;
 
@@ -119,6 +117,11 @@ static void *worker(void *arg) {
 
 /* ---------- Main ---------- */
 int main(int argc, char *argv[]) {
+
+    double overall_start, overall_end;
+    double compute_start, compute_end;
+    GET_TIME(overall_start);
+
     char *infile = NULL;
     char *outfile = NULL;
 
@@ -200,6 +203,8 @@ int main(int argc, char *argv[]) {
     int base = interior_rows / num_threads;
     int extra = interior_rows % num_threads;
 
+    GET_TIME(compute_start);
+
     int current_row = 1;
     for (int tid = 0; tid < num_threads; tid++) {
         int count = base + (tid < extra ? 1 : 0);
@@ -224,6 +229,8 @@ int main(int argc, char *argv[]) {
     for (int tid = 0; tid < num_threads; tid++) {
         pthread_join(threads[tid], NULL);
     }
+
+    GET_TIME(compute_end);
 
     if (debug >= 1) {
         printf("rows=%d cols=%d iterations=%d threads=%d\n",
@@ -252,6 +259,11 @@ int main(int argc, char *argv[]) {
     free(next);
     free(threads);
     free(args);
+
+    GET_TIME(overall_end);
+
+    printf("Overall time: %f seconds\n", overall_end - overall_start);
+    printf("Compute time: %f seconds\n", compute_end - compute_start);
 
     return 0;
 }

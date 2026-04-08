@@ -1,17 +1,22 @@
 #include <stdio.h>
 #include <stdlib.h>
 #include <string.h>
+#include <sys/time.h>
+#include "utilities.h"
 
-static void print_matrix(double *data, int rows, int cols) {
-    for (int i = 0; i < rows; i++) {
-        for (int j = 0; j < cols; j++) {
-            printf("%5.2f ", data[i * cols + j]);
-        }
-        printf("\n");
-    }
+/* Timing macro */
+#define GET_TIME(now) {                 \
+    struct timeval t;                  \
+    gettimeofday(&t, NULL);             \
+    now = t.tv_sec + t.tv_usec / 1e6;   \
 }
 
 int main(int argc, char *argv[]) {
+
+    double overall_start, overall_end;
+    double compute_start, compute_end;
+    GET_TIME(overall_start);
+
     int num_iters = -1;
     char *infile = NULL;
     char *outfile = NULL;
@@ -70,6 +75,8 @@ int main(int argc, char *argv[]) {
     }
     fclose(fp);
 
+    GET_TIME(compute_start);
+
     for (int iter = 0; iter < num_iters; iter++) {
         // Keep boundaries fixed
         for (int i = 0; i < rows; i++) {
@@ -108,6 +115,8 @@ int main(int argc, char *argv[]) {
         next = temp;
     }
 
+    GET_TIME(compute_end);
+
     if (debug >= 1) {
         printf("rows=%d cols=%d iterations=%d\n", rows, cols, num_iters);
         printf("input=%s output=%s\n", infile, outfile);
@@ -128,6 +137,11 @@ int main(int argc, char *argv[]) {
     fclose(fp);
     free(curr);
     free(next);
+
+    GET_TIME(overall_end);
+
+    printf("Overall time: %f seconds\n", overall_end - overall_start);
+    printf("Compute time: %f seconds\n", compute_end - compute_start);
 
     return 0;
 }
