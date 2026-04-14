@@ -1,0 +1,27 @@
+Job started at: Tue Apr 14 10:12:13 PDT 2026
+Host: exp-10-23
+gcc -Wall -Wstrict-prototypes -std=gnu99 -o make-2d make-2d.c utilities.c
+gcc -Wall -Wstrict-prototypes -std=gnu99 -o print-2d print-2d.c utilities.c
+gcc -Wall -Wstrict-prototypes -std=gnu99 -o stencil-2d stencil-2d.c utilities.c
+gcc -Wall -Wstrict-prototypes -std=gnu99 -pthread -o stencil-2d-pth stencil-2d-pth.c utilities.c
+gcc -Wall -Wstrict-prototypes -std=gnu99 -o verify verify.c utilities.c
+Creating input matrix 40000x40000
+========================================
+Running serial calibration: N=40000, T=5
+========================================
+Overall time: 109.206603 seconds
+Compute time: 86.962368 seconds
+========================================
+Running serial calibration: N=40000, T=10
+========================================
+Overall time: 192.173049 seconds
+Compute time: 173.765013 seconds
+========================================
+Running serial calibration: N=40000, T=20
+========================================
+Overall time: 361.860863 seconds
+Compute time: 345.520940 seconds
+========================================
+Running serial calibration: N=40000, T=40
+========================================
+slurmstepd: error: *** JOB 48059519 ON exp-10-23 CANCELLED AT 2026-04-14T10:24:53 ***
