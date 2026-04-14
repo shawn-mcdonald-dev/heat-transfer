@@ -1,40 +1,53 @@
 CC = gcc
 CFLAGS = -Wall -Wstrict-prototypes -std=gnu99
-# MPI helpers in utilities.c: build with e.g. `make utilities-mpi.o` (requires mpicc)
+# MPI helpers in utilities.c: build with e.g. `make build/utilities-mpi.o` (requires mpicc)
 CFLAGS_MPI = $(CFLAGS) -DHAVE_MPI
 
-UTILS = utilities.c
+SRC = src
+BUILD = build
 
-all: make-2d print-2d stencil-2d stencil-2d-pth stencil-2d-mpi test-framework verify
+UTILS = $(SRC)/utilities.c
 
-utilities-mpi.o: utilities.c utilities.h
-	mpicc $(CFLAGS_MPI) -c utilities.c -o utilities-mpi.o
+BINS = $(BUILD)/make-2d $(BUILD)/print-2d $(BUILD)/stencil-2d $(BUILD)/stencil-2d-pth \
+       $(BUILD)/stencil-2d-mpi $(BUILD)/test-framework $(BUILD)/verify
+PY_SCRIPTS = $(BUILD)/merge-stencil-shards.py $(BUILD)/visualize-2d.py
 
-stencil-2d-mpi: stencil-2d-mpi.c $(UTILS)
+all: $(BINS) $(PY_SCRIPTS)
+
+$(BUILD):
+	mkdir -p $(BUILD)
+
+$(BUILD)/%.py: $(SRC)/%.py | $(BUILD)
+	cp $< $@
+
+$(BUILD)/utilities-mpi.o: $(SRC)/utilities.c $(SRC)/utilities.h | $(BUILD)
+	mpicc $(CFLAGS_MPI) -c $(SRC)/utilities.c -o $@
+
+$(BUILD)/stencil-2d-mpi: $(SRC)/stencil-2d-mpi.c $(UTILS) | $(BUILD)
 	mpicc $(CFLAGS_MPI) -o $@ $^
 
-# Pre-flight: mpirun -np 1 ./test-framework  and  mpirun -np 2 ./test-framework
-test-framework: test-framework.c $(UTILS)
+# Pre-flight: mpirun -np 1 ./build/test-framework  and  mpirun -np 2 ./build/test-framework
+$(BUILD)/test-framework: $(SRC)/test-framework.c $(UTILS) | $(BUILD)
 	mpicc $(CFLAGS_MPI) -o $@ $^
 
-make-2d: make-2d.c $(UTILS)
+$(BUILD)/make-2d: $(SRC)/make-2d.c $(UTILS) | $(BUILD)
 	$(CC) $(CFLAGS) -o $@ $^
 
-print-2d: print-2d.c $(UTILS)
+$(BUILD)/print-2d: $(SRC)/print-2d.c $(UTILS) | $(BUILD)
 	$(CC) $(CFLAGS) -o $@ $^
 
-stencil-2d: stencil-2d.c $(UTILS)
+$(BUILD)/stencil-2d: $(SRC)/stencil-2d.c $(UTILS) | $(BUILD)
 	$(CC) $(CFLAGS) -o $@ $^
 
-stencil-2d-pth: stencil-2d-pth.c $(UTILS)
+$(BUILD)/stencil-2d-pth: $(SRC)/stencil-2d-pth.c $(UTILS) | $(BUILD)
 	$(CC) $(CFLAGS) -pthread -o $@ $^
 
-verify: verify.c $(UTILS)
+$(BUILD)/verify: $(SRC)/verify.c $(UTILS) | $(BUILD)
 	$(CC) $(CFLAGS) -o $@ $^
 
 clean:
-	rm -f make-2d print-2d stencil-2d stencil-2d-pth stencil-2d-mpi test-framework verify *.o *.dat
+	rm -rf $(BUILD)
 
 # Run unit/smoke tests (requires working mpirun; use -np 2+ for halo checks)
-check: test-framework
-	mpirun -np 2 ./test-framework && mpirun -np 1 ./test-framework
+check: $(BUILD)/test-framework
+	mpirun -np 2 $(BUILD)/test-framework && mpirun -np 1 $(BUILD)/test-framework
