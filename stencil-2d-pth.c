@@ -12,19 +12,6 @@
     now = t.tv_sec + t.tv_usec / 1e6;   \
 }
 
-typedef struct {
-    pthread_mutex_t mutex;
-    pthread_cond_t cond;
-    int count;
-    int trip_count;
-} barrier_t;
-
-typedef struct {
-    int tid;
-    int start_row;
-    int end_row;
-} thread_arg_t;
-
 static int rows, cols, num_iters, num_threads;
 static int debug = 0;
 static double *curr = NULL;
