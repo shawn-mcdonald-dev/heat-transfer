@@ -23,7 +23,7 @@ int main(int argc, char *argv[]) {
     int debug = 0;
 
     for (int k = 1; k < argc; k++) {
-        if (strcmp(argv[k], "-n") == 0 && k + 1 < argc) {
+        if (strcmp(argv[k], "-t") == 0 && k + 1 < argc) {
             num_iters = atoi(argv[++k]);
         } else if (strcmp(argv[k], "-i") == 0 && k + 1 < argc) {
             infile = argv[++k];
@@ -32,13 +32,13 @@ int main(int argc, char *argv[]) {
         } else if (strcmp(argv[k], "-v") == 0 && k + 1 < argc) {
             debug = atoi(argv[++k]);
         } else {
-            fprintf(stderr, "usage: %s -n <num_iters> -i <in> -o <out> -v <debug>\n", argv[0]);
+            fprintf(stderr, "usage: %s -t <num_iters> -i <in> -o <out> -v <debug>\n", argv[0]);
             return 1;
         }
     }
 
     if (num_iters < 0 || infile == NULL || outfile == NULL) {
-        fprintf(stderr, "usage: %s -n <num_iters> -i <in> -o <out> -v <debug>\n", argv[0]);
+        fprintf(stderr, "usage: %s -t <num_iters> -i <in> -o <out> -v <debug>\n", argv[0]);
         return 1;
     }
 
