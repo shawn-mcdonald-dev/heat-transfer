@@ -60,4 +60,4 @@ check: $(BUILD)/test-framework
 	mpirun -np 2 $(BUILD)/test-framework && mpirun -np 1 $(BUILD)/test-framework
 	# This runs 2 MPI processes, each using 4 OpenMP threads
 	$(BUILD)/make-2d 100 100 input.bin
-	mpirun -np 2 $(BUILD)/stencil-2d-hybrid -n 10 -i input.bin -o output_stem -p 4
+	mpirun -np 2 $(BUILD)/stencil-2d-hybrid -t 10 -i input.bin -o output_stem -p 4
