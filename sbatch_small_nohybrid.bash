@@ -58,4 +58,7 @@ echo "serial vs openmp"
 echo "serial vs mpi"
 ./build/verify out-serial.dat out-mpi.dat
 
+echo "serial vs hybrid"
+./build/verify out-serial.dat out-hybrid.dat
+
 echo "Done."
