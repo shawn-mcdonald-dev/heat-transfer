@@ -112,6 +112,23 @@ void stencil_mpi_recombine_plan_fill(stencil_mpi_recombine_plan_t *plan);
 int stencil_mpi_recombine_scatter_recvcount(int rank, int rows, int cols, int n_ranks);
 
 /**
+ * Rows each rank contributes when writing the full global matrix (same layout as
+ * stencil_mpi_shard_write): contiguous local rows [local_start, local_end_inclusive]
+ * map to global rows starting at file_global_first_row (0-based).
+ */
+void stencil_mpi_rank_file_rows_contrib(int rows, int cols, int rank, int n_ranks,
+                                        int *local_start, int *local_end_inclusive,
+                                        int *file_global_first_row, int *file_n_rows);
+
+/**
+ * MPI_Gatherv to rank 0, then write stencil-2d binary format (int rows, int cols,
+ * rows*cols doubles). Other ranks pass NULL recv buffer; requires HAVE_MPI.
+ * Returns 0 on success, -1 on error.
+ */
+int stencil_mpi_serial_gather_write(const stencil_mpi_domain_t *dom, const double *curr,
+                                    const char *outpath);
+
+/**
  * Write this rank's rows to path_stem.<rank> (e.g. out.dat.3).
  * No MPI communication; safe to call before/after timing sections.
  * Returns 0 on success, -1 on I/O error.

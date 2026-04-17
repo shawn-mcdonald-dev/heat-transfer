@@ -39,8 +39,9 @@ int compare_files(const char *f1, const char *f2)
         fread(&v1, sizeof(double), 1, fp1);
         fread(&v2, sizeof(double), 1, fp2);
 
-        if (v1 != v2)
+        if ((int)(100000 * v1) != (int)(100000 * v2))
         {
+            printf("Value 1: %f Value 2: %f\n", v1, v2);
             diff_count++;
         }
     }

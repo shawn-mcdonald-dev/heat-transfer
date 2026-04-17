@@ -366,6 +366,130 @@ static void test_shard_write(void)
     free(curr);
 }
 
+static void test_rank_file_rows_contrib_partition(void)
+{
+    section("stencil_mpi_rank_file_rows_contrib (partition)");
+    int rank, size;
+    MPI_Comm_rank(MPI_COMM_WORLD, &rank);
+    MPI_Comm_size(MPI_COMM_WORLD, &size);
+
+    int rows = 19;
+    int cols = 5;
+    if (size > rows - 2) {
+        if (g_tf_rank == 0) {
+            printf("SKIP rank_file_rows_contrib (world too large)\n");
+        }
+        return;
+    }
+
+    int sum_nr = 0;
+    for (int r = 0; r < size; r++) {
+        int ls, le, fg, nr;
+        stencil_mpi_rank_file_rows_contrib(rows, cols, r, size, &ls, &le, &fg, &nr);
+        sum_nr += nr;
+        EXPECT(ls <= le, "slice non-empty");
+        EXPECT(fg + nr <= rows, "slice fits in global rows");
+    }
+    EXPECT(sum_nr == rows, "row contributions sum to global height");
+
+    if (rank == 0) {
+        int *seen = calloc((size_t)rows, sizeof(int));
+        EXPECT(seen != NULL, "calloc seen");
+        if (seen) {
+            for (int r = 0; r < size; r++) {
+                int ls, le, fg, nr;
+                stencil_mpi_rank_file_rows_contrib(rows, cols, r, size, &ls, &le, &fg, &nr);
+                (void)ls;
+                (void)le;
+                for (int i = 0; i < nr; i++) {
+                    int g = fg + i;
+                    EXPECT(g >= 0 && g < rows, "global row in range");
+                    if (g >= 0 && g < rows) {
+                        EXPECT(seen[g] == 0, "no duplicate global row");
+                        seen[g] = 1;
+                    }
+                }
+            }
+            for (int g = 0; g < rows; g++) {
+                EXPECT(seen[g] == 1, "every global row covered");
+            }
+            free(seen);
+        }
+    }
+}
+
+static void test_serial_gather_write_roundtrip(void)
+{
+    section("stencil_mpi_serial_gather_write (stencil-2d file layout)");
+    int rank, size;
+    MPI_Comm_rank(MPI_COMM_WORLD, &rank);
+    MPI_Comm_size(MPI_COMM_WORLD, &size);
+
+    int rows = 13;
+    int cols = 8;
+    if (size > rows - 2) {
+        if (g_tf_rank == 0) {
+            printf("SKIP serial_gather_write (world too large)\n");
+        }
+        return;
+    }
+
+    stencil_mpi_domain_t dom;
+    stencil_mpi_domain_init(&dom, rows, cols);
+
+    int n = dom.local_rows * dom.cols;
+    double *curr = malloc((size_t)n * sizeof(double));
+    EXPECT(curr != NULL, "malloc curr");
+    if (!curr) {
+        return;
+    }
+
+    int ls, le, fg, nr;
+    stencil_mpi_rank_file_rows_contrib(rows, cols, rank, size, &ls, &le, &fg, &nr);
+    for (int li = ls; li <= le; li++) {
+        int g = fg + (li - ls);
+        for (int j = 0; j < cols; j++) {
+            curr[(size_t)li * (size_t)cols + (size_t)j] = 1000.0 * (double)g + (double)j;
+        }
+    }
+
+    char path[256];
+    memset(path, 0, sizeof(path));
+    if (rank == 0) {
+        snprintf(path, sizeof(path), "heat_fw_gather_%ld.dat", (long)getpid());
+    }
+    MPI_Bcast(path, (int)sizeof(path), MPI_BYTE, 0, MPI_COMM_WORLD);
+
+    EXPECT(stencil_mpi_serial_gather_write(&dom, curr, path) == 0, "serial_gather_write");
+
+    MPI_Barrier(MPI_COMM_WORLD);
+
+    if (rank == 0) {
+        FILE *fp = fopen(path, "rb");
+        EXPECT(fp != NULL, "open gathered file");
+        if (fp) {
+            int gr, gc;
+            EXPECT(fread(&gr, sizeof(int), 1, fp) == 1, "read rows");
+            EXPECT(fread(&gc, sizeof(int), 1, fp) == 1, "read cols");
+            EXPECT(gr == rows && gc == cols, "header dims");
+            for (int g = 0; g < rows; g++) {
+                for (int j = 0; j < cols; j++) {
+                    double v;
+                    EXPECT(fread(&v, sizeof(double), 1, fp) == 1, "read cell");
+                    double expect = 1000.0 * (double)g + (double)j;
+                    EXPECT(v == expect, "cell matches sentinel");
+                }
+            }
+            char extra;
+            EXPECT(fread(&extra, 1, 1, fp) == 0, "no trailing bytes");
+            fclose(fp);
+            remove(path);
+        }
+    }
+
+    free(curr);
+}
+
 int main(int argc, char *argv[])
 {
     MPI_Init(&argc, &argv);
@@ -391,6 +515,8 @@ int main(int argc, char *argv[])
     test_local_thread_rows();
     test_exchange_halos();
     test_shard_write();
+    test_rank_file_rows_contrib_partition();
+    test_serial_gather_write_roundtrip();
 
     int local = g_failures;
     int total;
