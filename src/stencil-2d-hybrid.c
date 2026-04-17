@@ -236,9 +236,10 @@ int main(int argc, char *argv[])
  
     GET_TIME(compute_end);
  
-    if (stencil_mpi_shard_write(&dom, curr, outfile) != 0) {
+    MPI_Barrier(MPI_COMM_WORLD);
+    if (stencil_mpi_serial_gather_write(&dom, curr, outfile) != 0) {
         if (world_rank == 0)
-            fprintf(stderr, "stencil_mpi_shard_write failed.\n");
+            fprintf(stderr, "stencil_mpi_serial_gather_write failed.\n");
         free(curr); free(next);
         MPI_Abort(MPI_COMM_WORLD, 1);
     }
