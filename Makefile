@@ -9,7 +9,8 @@ BUILD = build
 UTILS = $(SRC)/utilities.c
 
 BINS = $(BUILD)/make-2d $(BUILD)/print-2d $(BUILD)/stencil-2d $(BUILD)/stencil-2d-pth \
-       $(BUILD)/stencil-2d-mpi $(BUILD)/stencil-2d-hybrid $(BUILD)/test-framework $(BUILD)/verify 
+       $(BUILD)/stencil-2d-omp $(BUILD)/stencil-2d-mpi $(BUILD)/stencil-2d-hybrid \
+	   $(BUILD)/test-framework $(BUILD)/verify 
 PY_SCRIPTS = $(BUILD)/merge-stencil-shards.py $(BUILD)/visualize-2d.py
 
 all: $(BINS) $(PY_SCRIPTS)
@@ -44,6 +45,9 @@ $(BUILD)/stencil-2d: $(SRC)/stencil-2d.c $(UTILS) | $(BUILD)
 
 $(BUILD)/stencil-2d-pth: $(SRC)/stencil-2d-pth.c $(UTILS) | $(BUILD)
 	$(CC) $(CFLAGS) -pthread -o $@ $^
+
+$(BUILD)/stencil-2d-omp: $(SRC)/stencil-2d-omp.c $(UTILS) | $(BUILD)
+	$(CC) $(CFLAGS) -fopenmp -o $@ $^
 
 $(BUILD)/verify: $(SRC)/verify.c $(UTILS) | $(BUILD)
 	$(CC) $(CFLAGS) -o $@ $^
