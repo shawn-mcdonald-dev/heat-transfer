@@ -4,6 +4,12 @@
 #include <string.h>
 #include "utilities.h"
 
+#define GET_TIME(now) {                 \
+    struct timeval t;                   \
+    gettimeofday(&t, NULL);             \
+    now = t.tv_sec + t.tv_usec / 1e6;   \
+}
+
 static void apply_boundaries_to_next(const stencil_mpi_domain_t *dom, const double *curr,
                                      double *next)
 {
@@ -49,7 +55,11 @@ static void apply_interior_stencil(const stencil_mpi_domain_t *dom, const double
 
 int main(int argc, char *argv[])
 {
+    double overall_start, overall_end;
+    double compute_start, compute_end;
+
     MPI_Init(&argc, &argv);
+    GET_TIME(overall_start);
 
     int world_rank;
     int world_size;
@@ -61,7 +71,7 @@ int main(int argc, char *argv[])
     char *outfile = NULL;
 
     for (int k = 1; k < argc; k++) {
-        if (strcmp(argv[k], "-n") == 0 && k + 1 < argc) {
+        if (strcmp(argv[k], "-t") == 0 && k + 1 < argc) {
             num_iters = atoi(argv[++k]);
         } else if (strcmp(argv[k], "-i") == 0 && k + 1 < argc) {
             infile = argv[++k];
@@ -70,7 +80,7 @@ int main(int argc, char *argv[])
         } else {
             if (world_rank == 0) {
                 fprintf(stderr,
-                        "usage: %s -n <num_iters> -i <in> -o <out.dat>\n"
+                        "usage: %s -t <num_iters> -i <in> -o <out.dat>\n"
                         "  Writes one binary file (same format as stencil-2d: int rows, cols,\n"
                         "  then rows*cols doubles).\n",
                         argv[0]);
@@ -83,7 +93,7 @@ int main(int argc, char *argv[])
     if (num_iters < 0 || infile == NULL || outfile == NULL) {
         if (world_rank == 0) {
             fprintf(stderr,
-                    "usage: %s -n <num_iters> -i <in> -o <out.dat>\n",
+                    "usage: %s -t <num_iters> -i <in> -o <out.dat>\n",
                     argv[0]);
         }
         MPI_Finalize();
@@ -199,8 +209,11 @@ int main(int argc, char *argv[])
 
     memcpy(next, curr, scatter_bytes);
 
+    /* TIMING: iteration start */
+    MPI_Barrier(MPI_COMM_WORLD);
+    GET_TIME(compute_start);
+
     for (int iter = 0; iter < num_iters; iter++) {
-        /* TIMING: iteration start */
         stencil_mpi_exchange_halos(&dom, curr);
         apply_boundaries_to_next(&dom, curr, next);
         apply_interior_stencil(&dom, curr, next);
@@ -208,8 +221,11 @@ int main(int argc, char *argv[])
         double *tmp = curr;
         curr = next;
         next = tmp;
-        /* TIMING: iteration end */
     }
+
+    /* TIMING: iteration end */
+    MPI_Barrier(MPI_COMM_WORLD);
+    GET_TIME(compute_end);
 
     MPI_Barrier(MPI_COMM_WORLD);
     if (stencil_mpi_serial_gather_write(&dom, curr, outfile) != 0) {
@@ -219,6 +235,17 @@ int main(int argc, char *argv[])
         free(curr);
         free(next);
         MPI_Abort(MPI_COMM_WORLD, 1);
+    }
+
+    MPI_Barrier(MPI_COMM_WORLD);
+    if (world_rank == 0) {
+        GET_TIME(overall_end);
+        printf("ranks=%d rows=%d cols=%d iters=%d\n",
+               world_size, rows, cols, num_iters);
+        printf("T_overall=%f T_computation=%f T_other=%f\n",
+               overall_end - overall_start,
+               compute_end - compute_start,
+               (overall_end - overall_start) - (compute_end - compute_start));
     }
 
     free(curr);
