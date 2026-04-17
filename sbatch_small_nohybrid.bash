@@ -15,6 +15,10 @@ module load slurm
 module load gcc/10.2.0
 module load openmpi/4.1.1
 
+echo "Compiling code..."
+make clean
+make
+
 ROWS=512
 COLS=512
 ITERS=10
