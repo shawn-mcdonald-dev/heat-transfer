@@ -70,9 +70,9 @@ int main(int argc, char *argv[])
         } else {
             if (world_rank == 0) {
                 fprintf(stderr,
-                        "usage: %s -n <num_iters> -i <in> -o <out_stem>\n"
-                        "  Writes one shard per rank: <out_stem>.<rank>\n"
-                        "  Merge: python3 merge-stencil-shards.py <out_stem> <combined.dat>\n",
+                        "usage: %s -n <num_iters> -i <in> -o <out.dat>\n"
+                        "  Writes one binary file (same format as stencil-2d: int rows, cols,\n"
+                        "  then rows*cols doubles).\n",
                         argv[0]);
             }
             MPI_Finalize();
@@ -83,7 +83,7 @@ int main(int argc, char *argv[])
     if (num_iters < 0 || infile == NULL || outfile == NULL) {
         if (world_rank == 0) {
             fprintf(stderr,
-                    "usage: %s -n <num_iters> -i <in> -o <out_stem>\n",
+                    "usage: %s -n <num_iters> -i <in> -o <out.dat>\n",
                     argv[0]);
         }
         MPI_Finalize();
@@ -211,10 +211,10 @@ int main(int argc, char *argv[])
         /* TIMING: iteration end */
     }
 
-    /* I/O: independent shard per rank (no gather); timing-friendly */
-    if (stencil_mpi_shard_write(&dom, curr, outfile) != 0) {
+    MPI_Barrier(MPI_COMM_WORLD);
+    if (stencil_mpi_serial_gather_write(&dom, curr, outfile) != 0) {
         if (world_rank == 0) {
-            fprintf(stderr, "stencil_mpi_shard_write failed (see rank stderr).\n");
+            fprintf(stderr, "stencil_mpi_serial_gather_write failed (see rank stderr).\n");
         }
         free(curr);
         free(next);

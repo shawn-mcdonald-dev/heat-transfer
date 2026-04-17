@@ -324,9 +324,140 @@ void stencil_mpi_recombine_plan_fill(stencil_mpi_recombine_plan_t *plan)
 
         plan->scatter_sendcounts[r] = lr * cols;
         plan->scatter_displs[r] = (gfr - 1) * cols;
+        /* Interior rows only (not the same slice set as full-matrix I/O). */
         plan->gather_recvcounts[r] = owned * cols;
         plan->gather_displs[r] = gfr * cols;
     }
+}
+
+void stencil_mpi_rank_file_rows_contrib(int rows, int cols, int rank, int n_ranks,
+                                        int *local_start, int *local_end_inclusive,
+                                        int *file_global_first_row, int *file_n_rows)
+{
+    (void)cols;
+    op_range_t interior = get_node_op_range(n_ranks, rank, rows - 2);
+    int owned = interior.stop - interior.start;
+    int lr = owned + 2;
+    int global_first_interior = 1 + interior.start;
+
+    int ls;
+    int le;
+    int fg;
+
+    if (n_ranks == 1) {
+        ls = 0;
+        le = lr - 1;
+        fg = 0;
+    } else if (rank == 0) {
+        ls = 0;
+        le = owned;
+        fg = 0;
+    } else if (rank == n_ranks - 1) {
+        ls = 1;
+        le = lr - 1;
+        fg = global_first_interior;
+    } else {
+        ls = 1;
+        le = owned;
+        fg = global_first_interior;
+    }
+
+    *local_start = ls;
+    *local_end_inclusive = le;
+    *file_global_first_row = fg;
+    *file_n_rows = le - ls + 1;
+}
+
+int stencil_mpi_serial_gather_write(const stencil_mpi_domain_t *dom, const double *curr,
+                                    const char *outpath)
+{
+    if (dom == NULL || curr == NULL || outpath == NULL) {
+        return -1;
+    }
+
+#ifdef HAVE_MPI
+    int rows = dom->rows;
+    int cols = dom->cols;
+    int size = dom->size;
+    int rank = dom->rank;
+
+    int *recvcounts = malloc((size_t)size * sizeof(int));
+    int *displs = malloc((size_t)size * sizeof(int));
+    if (recvcounts == NULL || displs == NULL) {
+        free(recvcounts);
+        free(displs);
+        fprintf(stderr, "stencil_mpi_serial_gather_write: allocation failed.\n");
+        return -1;
+    }
+
+    for (int r = 0; r < size; r++) {
+        int ls, le, fg, nr;
+        stencil_mpi_rank_file_rows_contrib(rows, cols, r, size, &ls, &le, &fg, &nr);
+        recvcounts[r] = nr * cols;
+        displs[r] = fg * cols;
+    }
+
+    int ls, le, fg, nr;
+    stencil_mpi_rank_file_rows_contrib(rows, cols, rank, size, &ls, &le, &fg, &nr);
+    int sendcount = nr * cols;
+    /* MPI C binding uses void * (non-const); rank root does not modify send buffer. */
+    void *sendbuf_mpi = (void *)(curr + (size_t)ls * (size_t)cols);
+
+    double *recvbuf = NULL;
+    if (rank == 0) {
+        recvbuf = malloc((size_t)rows * (size_t)cols * sizeof(double));
+        if (recvbuf == NULL) {
+            free(recvcounts);
+            free(displs);
+            fprintf(stderr, "stencil_mpi_serial_gather_write: recv buffer alloc failed.\n");
+            return -1;
+        }
+    }
+
+    MPI_Gatherv(
+        sendbuf_mpi,
+        sendcount,
+        MPI_DOUBLE,
+        recvbuf,
+        recvcounts,
+        displs,
+        MPI_DOUBLE,
+        0,
+        MPI_COMM_WORLD);
+
+    free(recvcounts);
+    free(displs);
+
+    if (rank == 0) {
+        FILE *fp = fopen(outpath, "wb");
+        if (fp == NULL) {
+            perror("stencil_mpi_serial_gather_write fopen");
+            free(recvbuf);
+            return -1;
+        }
+        if (fwrite(&rows, sizeof(int), 1, fp) != 1 || fwrite(&cols, sizeof(int), 1, fp) != 1
+            || fwrite(recvbuf, sizeof(double), (size_t)rows * (size_t)cols, fp)
+                != (size_t)rows * (size_t)cols) {
+            fprintf(stderr, "stencil_mpi_serial_gather_write: fwrite failed.\n");
+            fclose(fp);
+            free(recvbuf);
+            return -1;
+        }
+        if (fclose(fp) != 0) {
+            perror("stencil_mpi_serial_gather_write fclose");
+            free(recvbuf);
+            return -1;
+        }
+        free(recvbuf);
+    }
+
+    return 0;
+#else
+    (void)curr;
+    (void)outpath;
+    fprintf(stderr, "stencil_mpi_serial_gather_write: built without HAVE_MPI.\n");
+    return -1;
+#endif
 }
 
 int stencil_mpi_shard_write(const stencil_mpi_domain_t *dom, const double *curr,
@@ -339,26 +470,12 @@ int stencil_mpi_shard_write(const stencil_mpi_domain_t *dom, const double *curr,
     int local_start;
     int local_end_inclusive;
     int file_global_first_row;
+    int file_n_rows;
 
-    if (dom->size == 1) {
-        local_start = 0;
-        local_end_inclusive = dom->local_rows - 1;
-        file_global_first_row = 0;
-    } else if (dom->rank == 0) {
-        local_start = 0;
-        local_end_inclusive = dom->owned_rows;
-        file_global_first_row = 0;
-    } else if (dom->rank == dom->size - 1) {
-        local_start = 1;
-        local_end_inclusive = dom->local_rows - 1;
-        file_global_first_row = dom->global_first_row;
-    } else {
-        local_start = 1;
-        local_end_inclusive = dom->owned_rows;
-        file_global_first_row = dom->global_first_row;
-    }
+    stencil_mpi_rank_file_rows_contrib(
+        dom->rows, dom->cols, dom->rank, dom->size,
+        &local_start, &local_end_inclusive, &file_global_first_row, &file_n_rows);
 
-    int file_n_rows = local_end_inclusive - local_start + 1;
     if (file_n_rows < 1 || dom->cols < 1) {
         return -1;
     }
@@ -382,7 +499,7 @@ int stencil_mpi_shard_write(const stencil_mpi_domain_t *dom, const double *curr,
     int32_t rk = dom->rank;
     int32_t ws = dom->size;
     int32_t fg = file_global_first_row;
-    int32_t nr = file_n_rows;
+    int32_t nr = (int32_t)file_n_rows;
 
     if (fwrite(&magic, sizeof(magic), 1, fp) != 1
         || fwrite(&version, sizeof(version), 1, fp) != 1

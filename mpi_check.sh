@@ -1,8 +1,8 @@
 #!/bin/bash
 
 
-iters=8
-procs=1
+iters=3
+procs=4
 
 echo Iters: $iters Procs: $procs
 
@@ -12,9 +12,7 @@ echo Iters: $iters Procs: $procs
 
 mpiexec -n $procs ./build/stencil-2d-mpi -n $iters -i out.dat -o mpi.dat
 
-python ./build/merge-stencil-shards.py mpi.dat mpi.dat
-
 ./build/verify sten.dat mpi.dat
 
-rm *.dat.*
-rm *.dat
+rm -f *.dat.*
+rm -f *.dat
