@@ -246,8 +246,8 @@ int main(int argc, char *argv[])
  
     if (world_rank == 0) {
         GET_TIME(overall_end);
-        printf("ranks=%d threads_per_rank=%d rows=%d cols=%d iters=%d\n",
-               world_size, num_threads, rows, cols, num_iters);
+        printf("version=hybrid threads=%d ranks=%d rows=%d cols=%d iters=%d\n",
+       num_threads, world_size, rows, cols, num_iters);
         printf("T_overall=%f T_computation=%f T_other=%f\n",
                overall_end - overall_start,
                compute_end - compute_start,

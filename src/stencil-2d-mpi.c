@@ -241,8 +241,7 @@ int main(int argc, char *argv[])
     MPI_Barrier(MPI_COMM_WORLD);
     if (world_rank == 0) {
         GET_TIME(overall_end);
-        printf("ranks=%d rows=%d cols=%d iters=%d\n",
-               world_size, rows, cols, num_iters);
+        printf("version=mpi threads=1 ranks=%d rows=%d cols=%d iters=%d\n", world_size, rows, cols, num_iters);
         printf("T_overall=%f T_computation=%f T_other=%f\n",
                overall_end - overall_start,
                compute_end - compute_start,
