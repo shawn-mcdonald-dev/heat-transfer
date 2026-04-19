@@ -1,0 +1,54 @@
+Current directory:
+/home/rbutbul/heat-transfer
+Files:
+total 56
+-rw-r--r-- 1 rbutbul ccu108   54 Apr 17  2026 heat-test.out
+-rw-r--r-- 1 rbutbul ccu108 2092 Apr 17 11:24 Makefile
+-rwxr-xr-x 1 rbutbul ccu108  281 Apr 17 11:08 mpi_check.sh
+drwxr-xr-x 2 rbutbul ccu108    3 Apr 17 11:08 output
+drwxr-xr-x 2 rbutbul ccu108    3 Apr 17 11:08 __pycache__
+-rw-r--r-- 1 rbutbul ccu108   58 Apr 17 11:08 README.md
+-rw-r--r-- 1 rbutbul ccu108  971 Apr 17 11:08 sbatch_calibrate_serial.bash
+-rwxr-xr-x 1 rbutbul ccu108 1348 Apr 17 11:29 sbatch_small_nohybrid.bash
+drwxr-xr-x 2 rbutbul ccu108   15 Apr 17 11:24 src
+Compiling...
+rm -rf build
+mkdir -p build
+gcc -Wall -Wstrict-prototypes -std=gnu99 -o build/make-2d src/make-2d.c src/utilities.c
+gcc -Wall -Wstrict-prototypes -std=gnu99 -o build/print-2d src/print-2d.c src/utilities.c
+gcc -Wall -Wstrict-prototypes -std=gnu99 -o build/stencil-2d src/stencil-2d.c src/utilities.c
+gcc -Wall -Wstrict-prototypes -std=gnu99 -pthread -o build/stencil-2d-pth src/stencil-2d-pth.c src/utilities.c
+gcc -Wall -Wstrict-prototypes -std=gnu99 -fopenmp -o build/stencil-2d-omp src/stencil-2d-omp.c src/utilities.c
+mpicc -Wall -Wstrict-prototypes -std=gnu99 -DHAVE_MPI -o build/stencil-2d-mpi src/stencil-2d-mpi.c src/utilities.c
+mpicc -Wall -Wstrict-prototypes -std=gnu99 -DHAVE_MPI -fopenmp -o build/stencil-2d-hybrid src/stencil-2d-hybrid.c src/utilities.c
+mpicc -Wall -Wstrict-prototypes -std=gnu99 -DHAVE_MPI -o build/test-framework src/test-framework.c src/utilities.c
+gcc -Wall -Wstrict-prototypes -std=gnu99 -o build/verify src/verify.c src/utilities.c
+cp src/merge-stencil-shards.py build/merge-stencil-shards.py
+cp src/visualize-2d.py build/visualize-2d.py
+Creating input matrix...
+Running serial...
+Overall time: 0.056458 seconds
+Compute time: 0.030515 seconds
+Overhead/Communication time: 0.025943 seconds
+Running pthreads...
+Overall time: 0.037541 seconds
+Compute time: 0.017380 seconds
+Overhead/Communication time: 0.020161 seconds
+Running OpenMP...
+usage: ./build/stencil-2d-omp -t <num_iters> -i <in> -o <out> -v <debug>
+Running MPI...
+ranks=4 rows=512 cols=512 iters=10
+T_overall=0.048619 T_computation=0.005667 T_other=0.042952
+Running hybrid...
+ranks=2 threads_per_rank=2 rows=512 cols=512 iters=10
+T_overall=8.820397 T_computation=0.011268 T_other=8.809129
+Verifying outputs...
+serial vs pthreads
+Files are identical (262144 cells checked)
+serial vs openmp
+fopen: No such file or directory
+serial vs mpi
+Files are identical (262144 cells checked)
+serial vs hybrid
+Files are identical (262144 cells checked)
+Done.
