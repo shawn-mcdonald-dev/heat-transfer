@@ -20,6 +20,9 @@ pwd
 echo "Files:"
 ls -l
 
+echo "Cleaning old data files..."
+rm -f *.dat
+
 echo "Compiling..."
 make clean
 make
@@ -39,7 +42,7 @@ echo "Running pthreads..."
 
 echo "Running OpenMP..."
 export OMP_NUM_THREADS=4
-./build/stencil-2d-omp -n $ITERS -i input-512.dat -o out-omp.dat
+./build/stencil-2d-omp -t $ITERS -i input-512.dat -o out-omp.dat -v 0
 
 echo "Running MPI..."
 mpirun -np 4 ./build/stencil-2d-mpi -t $ITERS -i input-512.dat -o out-mpi.dat
