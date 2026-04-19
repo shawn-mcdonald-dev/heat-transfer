@@ -1,0 +1,194 @@
+Current directory:
+/home/rbutbul/heat-transfer
+Files:
+total 100
+-rw-r--r-- 1 rbutbul ccu108   54 Apr 19  2026 heat-spotcheck.out
+-rw-r--r-- 1 rbutbul ccu108 2092 Apr 17 11:24 Makefile
+-rwxr-xr-x 1 rbutbul ccu108  281 Apr 17 11:08 mpi_check.sh
+drwxr-xr-x 2 rbutbul ccu108    7 Apr 19 11:56 output
+drwxr-xr-x 2 rbutbul ccu108    3 Apr 17 11:08 __pycache__
+-rw-r--r-- 1 rbutbul ccu108   58 Apr 17 11:08 README.md
+-rw-r--r-- 1 rbutbul ccu108  971 Apr 19 12:01 sbatch_calibrate_serial.bash
+-rwxr-xr-x 1 rbutbul ccu108 4105 Apr 19 12:13 sbatch_final_spotcheck.bash
+-rwxr-xr-x 1 rbutbul ccu108 1401 Apr 19 10:48 sbatch_mini_2.bash
+-rwxr-xr-x 1 rbutbul ccu108 2821 Apr 19 11:45 sbatch_mini_final.bash
+-rwxr-xr-x 1 rbutbul ccu108 1400 Apr 19 10:58 sbatch_small_nohybrid.bash
+drwxr-xr-x 2 rbutbul ccu108   15 Apr 19 12:14 src
+Cleaning old temporary data...
+Compiling...
+rm -rf build
+mkdir -p build
+gcc -Wall -Wstrict-prototypes -std=gnu99 -o build/make-2d src/make-2d.c src/utilities.c
+gcc -Wall -Wstrict-prototypes -std=gnu99 -o build/print-2d src/print-2d.c src/utilities.c
+gcc -Wall -Wstrict-prototypes -std=gnu99 -o build/stencil-2d src/stencil-2d.c src/utilities.c
+gcc -Wall -Wstrict-prototypes -std=gnu99 -pthread -o build/stencil-2d-pth src/stencil-2d-pth.c src/utilities.c
+gcc -Wall -Wstrict-prototypes -std=gnu99 -fopenmp -o build/stencil-2d-omp src/stencil-2d-omp.c src/utilities.c
+mpicc -Wall -Wstrict-prototypes -std=gnu99 -DHAVE_MPI -o build/stencil-2d-mpi src/stencil-2d-mpi.c src/utilities.c
+mpicc -Wall -Wstrict-prototypes -std=gnu99 -DHAVE_MPI -fopenmp -o build/stencil-2d-hybrid src/stencil-2d-hybrid.c src/utilities.c
+mpicc -Wall -Wstrict-prototypes -std=gnu99 -DHAVE_MPI -o build/test-framework src/test-framework.c src/utilities.c
+gcc -Wall -Wstrict-prototypes -std=gnu99 -o build/verify src/verify.c src/utilities.c
+cp src/merge-stencil-shards.py build/merge-stencil-shards.py
+cp src/visualize-2d.py build/visualize-2d.py
+==================================================
+Creating input matrix for 5000 x 5000
+==================================================
+Running serial for N=5000
+version=serial threads=1 ranks=1 rows=5000 cols=5000 iters=13
+T_overall=3.891156 T_computation=3.525660 T_other=0.365496
+--------------------------------------------------
+Running pthreads for N=5000, p=1
+--------------------------------------------------
+version=pthreads threads=1 ranks=1 rows=5000 cols=5000 iters=13
+T_overall=3.657032 T_computation=3.263973 T_other=0.393059
+--------------------------------------------------
+Running OpenMP for N=5000, p=1
+--------------------------------------------------
+version=openmp threads=1 ranks=1 rows=5000 cols=5000 iters=13
+T_overall=5.052210 T_computation=4.655601 T_other=0.396609
+--------------------------------------------------
+Running MPI for N=5000, p=1
+--------------------------------------------------
+version=mpi threads=1 ranks=1 rows=5000 cols=5000 iters=13
+T_overall=2.892571 T_computation=2.490874 T_other=0.401697
+--------------------------------------------------
+Running hybrid for N=5000, p=1
+--------------------------------------------------
+version=hybrid threads=1 ranks=1 rows=5000 cols=5000 iters=13
+T_overall=3.075040 T_computation=2.498462 T_other=0.576578
+--------------------------------------------------
+Running pthreads for N=5000, p=4
+--------------------------------------------------
+version=pthreads threads=4 ranks=1 rows=5000 cols=5000 iters=13
+T_overall=1.202705 T_computation=0.837855 T_other=0.364850
+--------------------------------------------------
+Running OpenMP for N=5000, p=4
+--------------------------------------------------
+version=openmp threads=4 ranks=1 rows=5000 cols=5000 iters=13
+T_overall=1.557271 T_computation=1.197569 T_other=0.359702
+--------------------------------------------------
+Running MPI for N=5000, p=4
+--------------------------------------------------
+version=mpi threads=1 ranks=4 rows=5000 cols=5000 iters=13
+T_overall=1.050163 T_computation=0.633840 T_other=0.416323
+--------------------------------------------------
+Running hybrid for N=5000, p=4
+--------------------------------------------------
+version=hybrid threads=2 ranks=2 rows=5000 cols=5000 iters=13
+T_overall=1.860834 T_computation=1.251749 T_other=0.609085
+--------------------------------------------------
+Running pthreads for N=5000, p=16
+--------------------------------------------------
+version=pthreads threads=16 ranks=1 rows=5000 cols=5000 iters=13
+T_overall=0.725806 T_computation=0.372893 T_other=0.352913
+--------------------------------------------------
+Running OpenMP for N=5000, p=16
+--------------------------------------------------
+version=openmp threads=16 ranks=1 rows=5000 cols=5000 iters=13
+T_overall=1.052419 T_computation=0.708036 T_other=0.344383
+--------------------------------------------------
+Running MPI for N=5000, p=16
+--------------------------------------------------
+version=mpi threads=1 ranks=16 rows=5000 cols=5000 iters=13
+T_overall=0.648551 T_computation=0.209949 T_other=0.438602
+--------------------------------------------------
+Running hybrid for N=5000, p=16
+--------------------------------------------------
+version=hybrid threads=4 ranks=4 rows=5000 cols=5000 iters=13
+T_overall=0.858890 T_computation=0.219698 T_other=0.639192
+==================================================
+Creating input matrix for 10000 x 10000
+==================================================
+Running serial for N=10000
+version=serial threads=1 ranks=1 rows=10000 cols=10000 iters=13
+T_overall=15.223750 T_computation=14.115834 T_other=1.107916
+--------------------------------------------------
+Running pthreads for N=10000, p=1
+--------------------------------------------------
+version=pthreads threads=1 ranks=1 rows=10000 cols=10000 iters=13
+T_overall=14.359328 T_computation=13.070882 T_other=1.288446
+--------------------------------------------------
+Running OpenMP for N=10000, p=1
+--------------------------------------------------
+version=openmp threads=1 ranks=1 rows=10000 cols=10000 iters=13
+T_overall=19.783082 T_computation=18.636384 T_other=1.146698
+--------------------------------------------------
+Running MPI for N=10000, p=1
+--------------------------------------------------
+version=mpi threads=1 ranks=1 rows=10000 cols=10000 iters=13
+T_overall=15.788172 T_computation=10.006455 T_other=5.781717
+--------------------------------------------------
+Running hybrid for N=10000, p=1
+--------------------------------------------------
+version=hybrid threads=1 ranks=1 rows=10000 cols=10000 iters=13
+T_overall=11.633607 T_computation=9.984313 T_other=1.649294
+--------------------------------------------------
+Running pthreads for N=10000, p=4
+--------------------------------------------------
+version=pthreads threads=4 ranks=1 rows=10000 cols=10000 iters=13
+T_overall=4.582769 T_computation=3.314941 T_other=1.267828
+--------------------------------------------------
+Running OpenMP for N=10000, p=4
+--------------------------------------------------
+version=openmp threads=4 ranks=1 rows=10000 cols=10000 iters=13
+T_overall=5.935239 T_computation=4.774748 T_other=1.160491
+--------------------------------------------------
+Running MPI for N=10000, p=4
+--------------------------------------------------
+version=mpi threads=1 ranks=4 rows=10000 cols=10000 iters=13
+T_overall=4.125568 T_computation=2.532499 T_other=1.593069
+--------------------------------------------------
+Running hybrid for N=10000, p=4
+--------------------------------------------------
+version=hybrid threads=2 ranks=2 rows=10000 cols=10000 iters=13
+T_overall=6.709846 T_computation=5.005948 T_other=1.703898
+--------------------------------------------------
+Running pthreads for N=10000, p=16
+--------------------------------------------------
+version=pthreads threads=16 ranks=1 rows=10000 cols=10000 iters=13
+T_overall=2.554474 T_computation=1.046218 T_other=1.508256
+--------------------------------------------------
+Running OpenMP for N=10000, p=16
+--------------------------------------------------
+version=openmp threads=16 ranks=1 rows=10000 cols=10000 iters=13
+T_overall=2.534017 T_computation=1.401913 T_other=1.132104
+--------------------------------------------------
+Running MPI for N=10000, p=16
+--------------------------------------------------
+version=mpi threads=1 ranks=16 rows=10000 cols=10000 iters=13
+T_overall=2.096800 T_computation=0.684112 T_other=1.412688
+--------------------------------------------------
+Running hybrid for N=10000, p=16
+--------------------------------------------------
+version=hybrid threads=4 ranks=4 rows=10000 cols=10000 iters=13
+T_overall=2.451007 T_computation=0.730197 T_other=1.720810
+==================================================
+Spot-check CSV:
+==================================================
+version,p,threads,ranks,rows,cols,iters,T_overall,T_computation,T_other
+serial,1,1,1,5000,5000,13,3.891156,3.525660,0.365496
+pthreads,1,1,1,5000,5000,13,3.657032,3.263973,0.393059
+openmp,1,1,1,5000,5000,13,5.052210,4.655601,0.396609
+mpi,1,1,1,5000,5000,13,2.892571,2.490874,0.401697
+hybrid,1,1,1,5000,5000,13,3.075040,2.498462,0.576578
+pthreads,4,4,1,5000,5000,13,1.202705,0.837855,0.364850
+openmp,4,4,1,5000,5000,13,1.557271,1.197569,0.359702
+mpi,4,1,4,5000,5000,13,1.050163,0.633840,0.416323
+hybrid,4,2,2,5000,5000,13,1.860834,1.251749,0.609085
+pthreads,16,16,1,5000,5000,13,0.725806,0.372893,0.352913
+openmp,16,16,1,5000,5000,13,1.052419,0.708036,0.344383
+mpi,16,1,16,5000,5000,13,0.648551,0.209949,0.438602
+hybrid,16,4,4,5000,5000,13,0.858890,0.219698,0.639192
+serial,1,1,1,10000,10000,13,15.223750,14.115834,1.107916
+pthreads,1,1,1,10000,10000,13,14.359328,13.070882,1.288446
+openmp,1,1,1,10000,10000,13,19.783082,18.636384,1.146698
+mpi,1,1,1,10000,10000,13,15.788172,10.006455,5.781717
+hybrid,1,1,1,10000,10000,13,11.633607,9.984313,1.649294
+pthreads,4,4,1,10000,10000,13,4.582769,3.314941,1.267828
+openmp,4,4,1,10000,10000,13,5.935239,4.774748,1.160491
+mpi,4,1,4,10000,10000,13,4.125568,2.532499,1.593069
+hybrid,4,2,2,10000,10000,13,6.709846,5.005948,1.703898
+pthreads,16,16,1,10000,10000,13,2.554474,1.046218,1.508256
+openmp,16,16,1,10000,10000,13,2.534017,1.401913,1.132104
+mpi,16,1,16,10000,10000,13,2.096800,0.684112,1.412688
+hybrid,16,4,4,10000,10000,13,2.451007,0.730197,1.720810
+Done.
