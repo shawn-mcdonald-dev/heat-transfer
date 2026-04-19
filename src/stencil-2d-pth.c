@@ -249,9 +249,13 @@ int main(int argc, char *argv[]) {
 
     GET_TIME(overall_end);
 
-    printf("Overall time: %f seconds\n", overall_end - overall_start);
-    printf("Compute time: %f seconds\n", compute_end - compute_start);
-    printf("Overhead/Communication time: %f seconds\n", (overall_end - overall_start)-(compute_end - compute_start));
+    printf("version=pthreads threads=%d ranks=1 rows=%d cols=%d iters=%d\n",
+       num_threads, rows, cols, num_iters);
+
+printf("T_overall=%f T_computation=%f T_other=%f\n",
+       overall_end - overall_start,
+       compute_end - compute_start,
+       (overall_end - overall_start) - (compute_end - compute_start));
 
     return 0;
 }
