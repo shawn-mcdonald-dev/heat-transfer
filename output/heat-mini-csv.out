@@ -1,0 +1,63 @@
+Current directory:
+/home/rbutbul/heat-transfer
+Files:
+total 91
+-rw-r--r-- 1 rbutbul ccu108   54 Apr 19  2026 heat-mini-csv.out
+-rw-r--r-- 1 rbutbul ccu108 2092 Apr 17 11:24 Makefile
+-rwxr-xr-x 1 rbutbul ccu108  281 Apr 17 11:08 mpi_check.sh
+drwxr-xr-x 2 rbutbul ccu108    5 Apr 19 10:53 output
+drwxr-xr-x 2 rbutbul ccu108    3 Apr 17 11:08 __pycache__
+-rw-r--r-- 1 rbutbul ccu108   58 Apr 17 11:08 README.md
+-rw-r--r-- 1 rbutbul ccu108  971 Apr 17 11:08 sbatch_calibrate_serial.bash
+-rwxr-xr-x 1 rbutbul ccu108 1401 Apr 19 10:48 sbatch_mini_2.bash
+-rwxr-xr-x 1 rbutbul ccu108 2821 Apr 19 11:45 sbatch_mini_final.bash
+-rwxr-xr-x 1 rbutbul ccu108 1400 Apr 19 10:58 sbatch_small_nohybrid.bash
+drwxr-xr-x 2 rbutbul ccu108   15 Apr 19 11:45 src
+Cleaning old data files...
+Compiling...
+rm -rf build
+mkdir -p build
+gcc -Wall -Wstrict-prototypes -std=gnu99 -o build/make-2d src/make-2d.c src/utilities.c
+gcc -Wall -Wstrict-prototypes -std=gnu99 -o build/print-2d src/print-2d.c src/utilities.c
+gcc -Wall -Wstrict-prototypes -std=gnu99 -o build/stencil-2d src/stencil-2d.c src/utilities.c
+gcc -Wall -Wstrict-prototypes -std=gnu99 -pthread -o build/stencil-2d-pth src/stencil-2d-pth.c src/utilities.c
+gcc -Wall -Wstrict-prototypes -std=gnu99 -fopenmp -o build/stencil-2d-omp src/stencil-2d-omp.c src/utilities.c
+mpicc -Wall -Wstrict-prototypes -std=gnu99 -DHAVE_MPI -o build/stencil-2d-mpi src/stencil-2d-mpi.c src/utilities.c
+mpicc -Wall -Wstrict-prototypes -std=gnu99 -DHAVE_MPI -fopenmp -o build/stencil-2d-hybrid src/stencil-2d-hybrid.c src/utilities.c
+mpicc -Wall -Wstrict-prototypes -std=gnu99 -DHAVE_MPI -o build/test-framework src/test-framework.c src/utilities.c
+gcc -Wall -Wstrict-prototypes -std=gnu99 -o build/verify src/verify.c src/utilities.c
+cp src/merge-stencil-shards.py build/merge-stencil-shards.py
+cp src/visualize-2d.py build/visualize-2d.py
+Creating input matrix...
+Running serial...
+version=serial threads=1 ranks=1 rows=5000 cols=5000 iters=20
+T_overall=5.862771 T_computation=5.518350 T_other=0.344421
+Running pthreads...
+version=pthreads threads=4 ranks=1 rows=5000 cols=5000 iters=20
+T_overall=1.698680 T_computation=1.315882 T_other=0.382798
+Running OpenMP...
+version=openmp threads=4 ranks=1 rows=5000 cols=5000 iters=20
+T_overall=2.234714 T_computation=1.868660 T_other=0.366054
+Running MPI...
+version=mpi threads=1 ranks=4 rows=5000 cols=5000 iters=20
+T_overall=1.436619 T_computation=0.994066 T_other=0.442553
+Running hybrid...
+version=hybrid threads=2 ranks=2 rows=5000 cols=5000 iters=20
+T_overall=2.620355 T_computation=1.989362 T_other=0.630993
+Verifying outputs...
+serial vs pthreads
+Files are identical (25000000 cells checked)
+serial vs openmp
+Files are identical (25000000 cells checked)
+serial vs mpi
+Files are identical (25000000 cells checked)
+serial vs hybrid
+Files are identical (25000000 cells checked)
+CSV contents:
+version,threads,ranks,rows,cols,iters,T_overall,T_computation,T_other
+serial,1,1,5000,5000,20,5.862771,5.518350,0.344421
+pthreads,4,1,5000,5000,20,1.698680,1.315882,0.382798
+openmp,4,1,5000,5000,20,2.234714,1.868660,0.366054
+mpi,1,4,5000,5000,20,1.436619,0.994066,0.442553
+hybrid,2,2,5000,5000,20,2.620355,1.989362,0.630993
+Done.
