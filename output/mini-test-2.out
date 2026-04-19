@@ -1,0 +1,57 @@
+Current directory:
+/home/rbutbul/heat-transfer
+Files:
+total 65
+-rw-r--r-- 1 rbutbul ccu108   54 Apr 19  2026 heat-test.out
+-rw-r--r-- 1 rbutbul ccu108 2092 Apr 17 11:24 Makefile
+-rwxr-xr-x 1 rbutbul ccu108  281 Apr 17 11:08 mpi_check.sh
+drwxr-xr-x 2 rbutbul ccu108    4 Apr 19 10:28 output
+drwxr-xr-x 2 rbutbul ccu108    3 Apr 17 11:08 __pycache__
+-rw-r--r-- 1 rbutbul ccu108   58 Apr 17 11:08 README.md
+-rw-r--r-- 1 rbutbul ccu108  971 Apr 17 11:08 sbatch_calibrate_serial.bash
+-rwxr-xr-x 1 rbutbul ccu108 1401 Apr 19 10:48 sbatch_mini_2.bash
+-rwxr-xr-x 1 rbutbul ccu108 1348 Apr 17 11:29 sbatch_small_nohybrid.bash
+drwxr-xr-x 2 rbutbul ccu108   15 Apr 17 11:24 src
+Cleaning old data files...
+Compiling...
+rm -rf build
+mkdir -p build
+gcc -Wall -Wstrict-prototypes -std=gnu99 -o build/make-2d src/make-2d.c src/utilities.c
+gcc -Wall -Wstrict-prototypes -std=gnu99 -o build/print-2d src/print-2d.c src/utilities.c
+gcc -Wall -Wstrict-prototypes -std=gnu99 -o build/stencil-2d src/stencil-2d.c src/utilities.c
+gcc -Wall -Wstrict-prototypes -std=gnu99 -pthread -o build/stencil-2d-pth src/stencil-2d-pth.c src/utilities.c
+gcc -Wall -Wstrict-prototypes -std=gnu99 -fopenmp -o build/stencil-2d-omp src/stencil-2d-omp.c src/utilities.c
+mpicc -Wall -Wstrict-prototypes -std=gnu99 -DHAVE_MPI -o build/stencil-2d-mpi src/stencil-2d-mpi.c src/utilities.c
+mpicc -Wall -Wstrict-prototypes -std=gnu99 -DHAVE_MPI -fopenmp -o build/stencil-2d-hybrid src/stencil-2d-hybrid.c src/utilities.c
+mpicc -Wall -Wstrict-prototypes -std=gnu99 -DHAVE_MPI -o build/test-framework src/test-framework.c src/utilities.c
+gcc -Wall -Wstrict-prototypes -std=gnu99 -o build/verify src/verify.c src/utilities.c
+cp src/merge-stencil-shards.py build/merge-stencil-shards.py
+cp src/visualize-2d.py build/visualize-2d.py
+Creating input matrix...
+Running serial...
+Overall time: 0.045847 seconds
+Compute time: 0.031786 seconds
+Overhead/Communication time: 0.014061 seconds
+Running pthreads...
+Overall time: 0.025207 seconds
+Compute time: 0.010581 seconds
+Overhead/Communication time: 0.014626 seconds
+Running OpenMP...
+Overall time: 0.025450 seconds
+Compute time: 0.012188 seconds
+Running MPI...
+ranks=4 rows=512 cols=512 iters=10
+T_overall=0.042159 T_computation=0.005924 T_other=0.036235
+Running hybrid...
+ranks=2 threads_per_rank=2 rows=512 cols=512 iters=10
+T_overall=0.285466 T_computation=0.012150 T_other=0.273316
+Verifying outputs...
+serial vs pthreads
+Files are identical (262144 cells checked)
+serial vs openmp
+Files are identical (262144 cells checked)
+serial vs mpi
+Files are identical (262144 cells checked)
+serial vs hybrid
+Files are identical (262144 cells checked)
+Done.
