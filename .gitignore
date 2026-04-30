@@ -2,3 +2,4 @@
 *.dat
 *.dSYM/
 build/
+.env
